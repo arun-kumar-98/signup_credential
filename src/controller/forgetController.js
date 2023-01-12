@@ -3,6 +3,8 @@ const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const appConst = require("./constant");
 const jsonwebtoken = require("jsonwebtoken");
+const moment = require("moment");
+const timezone = require("moment-timezone");
 
 const { mail } = require("../commonService/emailController");
 
@@ -10,8 +12,10 @@ const { mail } = require("../commonService/emailController");
 const getUser = async (req, res) => {
   try {
     let forgettToken;
-    let date = new Date();
+    let date = Date.now();
     let email = req.body.userName;
+    const expiryTime = moment(date).add(5, "minute").format("hh:mm:ss A");
+    console.log(expiryTime);
     const respOne = await prisma.user.findFirst({
       where: {
         userName: email,
@@ -42,17 +46,17 @@ const getUser = async (req, res) => {
 
     let token = cutShort();
     console.log("--------------------> ", forgettToken);
-    const avx = await prisma.user
-      .update({
-        where: {
-          userName: respOne.userName,
-        },
-        data: {
-          forgetToken: token,
-          expiryTime: new Date(date.getTime() + 5 * 60000).toLocaleTimeString(),
-        },
-      })
-      .then(console.log("success"));
+    const avx = await prisma.user.update({
+      where: {
+        userName: respOne.userName,
+      },
+      data: {
+        forgetToken: token,
+        expiryTime: expiryTime,
+      },
+    });
+    console.log(avx);
+
     mail(email, token);
   } catch (error) {
     console.log(error);
@@ -69,8 +73,9 @@ const forgetPassword = async (req, res) => {
     //parse req.body data
     const userData = req.body;
     let date = new Date();
-    let currentTime = new Date(date.getTime() + 0 * 60000).toLocaleTimeString();
-    console.log(currentTime);
+
+    // let currentTime = new Date(date.getTime() + 0 * 60000).toLocaleTimeString();
+
     //regex pattern to match password
     const regex =
       /^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$/;
@@ -84,12 +89,16 @@ const forgetPassword = async (req, res) => {
 
     //if user existed
 
+    const currentTime = moment(date).format("hh:mm:ss A");
+
+    console.log(currentTime);
+
     if (isUser) {
       //compare token
       if (req.headers.token != isUser.forgetToken) {
         throw (error, console.log("Token mismatched!"));
       } else {
-        console.log("expiry token", isUser.expiryTime);
+        console.log("expiry token===> ", isUser.expiryTime);
         if (currentTime <= isUser.expiryTime) {
           //matching password pattern
           if (userData.newPassword.match(regex)) {
@@ -99,7 +108,6 @@ const forgetPassword = async (req, res) => {
               where: { userName: userData.userName },
               data: { password: encryptedPwd },
             });
-
             res.status(200).json({
               reponse: resp,
               mesg: appConst.message.pwd_successfully_changed,
@@ -118,6 +126,10 @@ const forgetPassword = async (req, res) => {
           }
         } else {
           res.status(400).json({
+            msg: `token expired ${moment(
+              isUser.expiryTime,
+              "hh:mm:ss A"
+            ).fromNow()} `,
             response: appConst.status.fail,
           });
         }
