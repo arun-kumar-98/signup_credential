@@ -18,4 +18,6 @@ model user {
   password String
   token String
   forgetToken String?
-}
+  expiryTime String?
+  }
+ 

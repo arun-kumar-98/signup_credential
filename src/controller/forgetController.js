@@ -10,13 +10,14 @@ const { mail } = require("../commonService/emailController");
 const getUser = async (req, res) => {
   try {
     let forgettToken;
+    let date = new Date();
     let email = req.body.userName;
     const respOne = await prisma.user.findFirst({
       where: {
         userName: email,
       },
     });
-   //console.log(respOne.userName);
+    //console.log(respOne.userName);
     if (!respOne.userName) {
       res.status(404).json({
         status: appConst.status.fail,
@@ -46,7 +47,10 @@ const getUser = async (req, res) => {
         where: {
           userName: respOne.userName,
         },
-        data: { forgetToken: token },
+        data: {
+          forgetToken: token,
+          expiryTime: new Date(date.getTime() + 5 * 60000).toLocaleTimeString(),
+        },
       })
       .then(console.log("success"));
     mail(email, token);
@@ -64,7 +68,9 @@ const forgetPassword = async (req, res) => {
   try {
     //parse req.body data
     const userData = req.body;
-
+    let date = new Date();
+    let currentTime = new Date(date.getTime() + 0 * 60000).toLocaleTimeString();
+    console.log(currentTime);
     //regex pattern to match password
     const regex =
       /^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$/;
@@ -74,6 +80,7 @@ const forgetPassword = async (req, res) => {
     const isUser = await prisma.user.findFirst({
       where: { userName: userData.userName },
     });
+    console.log(isUser);
 
     //if user existed
 
@@ -82,29 +89,36 @@ const forgetPassword = async (req, res) => {
       if (req.headers.token != isUser.forgetToken) {
         throw (error, console.log("Token mismatched!"));
       } else {
-        //matching password pattern
-        if (userData.newPassword.match(regex)) {
-          const encryptedPwd = await bcrypt.hash(userData.newPassword, 10);
-          console.log(encryptedPwd);
-          const resp = await prisma.user.update({
-            where: { userName: userData.userName },
-            data: { password: encryptedPwd },
-          });
+        console.log("expiry token", isUser.expiryTime);
+        if (currentTime <= isUser.expiryTime) {
+          //matching password pattern
+          if (userData.newPassword.match(regex)) {
+            const encryptedPwd = await bcrypt.hash(userData.newPassword, 10);
+            console.log(encryptedPwd);
+            const resp = await prisma.user.update({
+              where: { userName: userData.userName },
+              data: { password: encryptedPwd },
+            });
 
-          res.status(200).json({
-            reponse: resp,
-            mesg: appConst.message.pwd_successfully_changed,
-          });
+            res.status(200).json({
+              reponse: resp,
+              mesg: appConst.message.pwd_successfully_changed,
+            });
 
-          //if password changed successfully then 
-          //delete forgetToken from db 
-          await prisma.user.update({
-            where: { userName: userData.userName },
-            data: { forgetToken: null },
-          });
+            //if password changed successfully then
+            //delete forgetToken from db
+            await prisma.user.update({
+              where: { userName: userData.userName },
+              data: { forgetToken: null, expiryTime: null },
+            });
+          } else {
+            res.status(400).json({
+              msg: appConst.message.pwd_pattern,
+            });
+          }
         } else {
           res.status(400).json({
-            msg: appConst.message.pwd_pattern,
+            response: appConst.status.fail,
           });
         }
       }
