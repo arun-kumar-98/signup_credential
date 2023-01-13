@@ -26,7 +26,7 @@ function mail(email, forgetToken) {
       console.log(err.message);
       return err;
     }
-    console.log("Mail Sent" + info.response);
+    console.log("Mail Sent" + info.response); 
     res.status(200).json({
       msg: "you recieve an email",
       info: info.messageId,

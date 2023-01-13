@@ -3,6 +3,7 @@ const prisma = new PrismaClient();
 const appConst = require("./constant");
 const jsonwebtoken = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
+const { join } = require("@prisma/client/runtime");
 
 const SignUp = async (req, res) => {
   try {
@@ -11,7 +12,7 @@ const SignUp = async (req, res) => {
     console.log(userData);
     //regex pattern to match password
     const regex =
-    /^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$/;
+      /^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$/;
 
     if (!userData.password.match(regex)) {
       //send status
@@ -30,10 +31,23 @@ const SignUp = async (req, res) => {
       );
 
       console.log("---------------------------> ", userData);
-      const resp = await prisma.user.create({ data: userData });
+      // insert data
+      const resp = await prisma.user.create({
+        data: {
+          userName: userData.userName,
+          password: userData.password,
+          token: userData.token,
+
+          successor: {
+            connect: {},
+          },
+        },
+        include: { successor: true },
+      });
       res.status(201).json({
         status: appConst.status.success,
         message: appConst.message.signup_success,
+        response: resp,
       });
     }
   } catch (error) {

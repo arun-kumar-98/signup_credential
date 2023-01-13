@@ -1,6 +1,3 @@
-
-
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,14 +7,15 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-
 model user {
-  id   String                  @id @default(cuid())
-  createdAt DateTime           @default(now())
-  userName String              @unique
-  password String
-  token String
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  userName    String   @unique
+  password    String
+  token       String
   forgetToken String?
-  expiryTime DateTime?
-  }
- 
+  expiryTime  String?
+  successorId String?  @unique()
+  successor   user?    @relation("user", fields: [successorId], references: [id])
+  predecessor user?    @relation("user")
+}
