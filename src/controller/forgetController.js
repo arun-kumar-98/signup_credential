@@ -144,7 +144,92 @@ const forgetPassword = async (req, res) => {
   }
 };
 
+//find records
+
+const records = async (req, res) => {
+  try {
+    const resp = await prisma.user.findUniqueOrThrow({
+      where: { id: req.body.id },
+    });
+    res.status(200).json({
+      response: resp,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(400).json({
+      response: error,
+    });
+  }
+};
+
+//find many
+const findsMany = async (req, res) => {
+  try {
+    const resp = await prisma.user.findMany({
+      skip: req.body.skip,
+      take: req.body.take,
+      where: {
+        userName: {
+          contains: "@gmail.com",
+        },
+      },
+      orderBy: {
+        userName: "desc",
+      },
+    });
+    res.status(200).json({
+      response: resp,
+    });
+  } catch (error) {
+    console.log(error);
+    res.send(error);
+  }
+};
+
+//update records
+
+const updateSingleRecords = async (req, res) => {
+  try {
+    const resp = await prisma.user.update({
+      where: {
+        id: req.body.id,
+      },
+      data: { userName: req.body.userName },
+    });
+
+    res.status(200).json({
+      response: resp,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(400).json({
+      response: error,
+    });
+  }
+};
+//delete api
+
+const deleteOne = async (req, res) => {
+  try {
+    const effecttedRows = await prisma.user.delete({
+      where: { id: req.body.id },
+    });
+    res.status(200).json({
+      response: effecttedRows,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(400).json({
+      errMessage: error,
+    });
+  }
+};
+
 module.exports = {
   getUser,
   forgetPassword,
+  records,
+  findsMany,
+  updateSingleRecords,
+  deleteOne,
 };

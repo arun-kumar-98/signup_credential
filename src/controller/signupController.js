@@ -39,11 +39,16 @@ const SignUp = async (req, res) => {
           token: userData.token,
 
           successor: {
-            connect: {},
+            create: {
+              userName: req.body.userName1,
+              password: userData.password,
+              token: userData.token,
+            },
           },
         },
-        include: { successor: true },
       });
+      //get successor id
+      console.log(resp.successorId);
       res.status(201).json({
         status: appConst.status.success,
         message: appConst.message.signup_success,
